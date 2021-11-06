@@ -85,7 +85,7 @@ float MeasureSession::calculateT() const {
             const Point &p1 = periodData[i - 1].point;
             const Point &p2 = periodData[i].point;
             auto distance = float(abs(p1.x - p2.x));
-            if (distance < 10) {
+            if (distance < 5) {
                 continue;
             }
             float weight = 1.0f; // float(atan(distance / (mImageSize.width / 60)));

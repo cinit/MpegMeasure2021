@@ -69,12 +69,23 @@ int main() {
         MeasureSession measureSession;
         bool showResult = false;
         uint64_t hwCtlStartTime = 0;
+        struct {
+            uint64_t lastTime = 0;
+            int counter = 0;
+            int fps = 0;
+        } fpsCounter;
         while (true) {
             uint64_t startTime1 = getRelativeTimeMs();
             cv::Mat imgA = connA.readImage();
             uint64_t startTime2 = getRelativeTimeMs();
             cv::Mat imgB = connB.readImage();
             uint64_t startTime3 = getRelativeTimeMs();
+            fpsCounter.counter++;
+            if (startTime1 - fpsCounter.lastTime >= 1000) {
+                fpsCounter.fps = fpsCounter.counter;
+                fpsCounter.counter = 0;
+                fpsCounter.lastTime = startTime1;
+            }
             if (imgA.empty()) {
                 cout << "read img error" << endl;
                 break;
@@ -137,7 +148,8 @@ int main() {
             float motionDegree = measureSession.calculateTheta();
             float lineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 7.5f;
             char buf[64];
-            snprintf(buf, 64, "T= %.3f s  length= %.1f cm theta = %.1f", periodTime, lineLength, motionDegree);
+            snprintf(buf, 64, "T= %.3f s | length= %.1f cm | theta= %.1f | %d fps",
+                     periodTime, lineLength, motionDegree, fpsCounter.fps);
             lwk::DrawTextLeftCenter(imgA, buf, 16, 16, Scalar(0, 0, 0));
 //                lwk::DrawTextLeftCenter(imgB, buf, 16, 16, Scalar(0, 0, 0));
 
