@@ -150,14 +150,9 @@ int main() {
             }
             float periodTime = measureSession.calculateT() / 1000.0f;
             float motionDegree = measureSession.calculateTheta();
-            float lineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 7.5f;
+            float rawLineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 7.5f;
+            float lineLength = 0.9881f * rawLineLength + 0.9509f;
             char buf[256];
-            snprintf(buf, 256, "T= %.3f s | length= %.1f cm | theta= %.1f | %d/%d epoch(s) | %d fps | %.1f'C",
-                     periodTime, lineLength, motionDegree,
-                     int(measureSession.getPeriodDataA().size()), int(measureSession.getPeriodDataB().size()),
-                     fpsCounter.fps, fpsCounter.coreTemperature);
-            lwk::DrawTextLeftCenter(imgA, buf, 16, 16, Scalar(0, 0, 0));
-//                lwk::DrawTextLeftCenter(imgB, buf, 16, 16, Scalar(0, 0, 0));
             Mat windowBuffer = Mat(Size(imgA.cols * 2, imgA.rows), CV_8UC3);
             imgA.copyTo(windowBuffer(Rect(0, 0, imgA.cols, imgA.rows)));
             imgB.copyTo(windowBuffer(Rect(imgB.cols, 0, imgB.cols, imgB.rows)));
@@ -167,6 +162,11 @@ int main() {
                 snprintf(buf, 64, "theta = %.1f deg", motionDegree);
                 putText(windowBuffer, buf, Point(300, 300), FONT_HERSHEY_TRIPLEX, 2, Scalar(0, 0, 0), 2);
             }
+            snprintf(buf, 256, "T= %.3f s | length= %.1f(%.1f) cm | theta= %.1f | %d/%d epoch(s) | %d fps | %.1f'C",
+                     periodTime, lineLength, rawLineLength, motionDegree,
+                     int(measureSession.getPeriodDataA().size()), int(measureSession.getPeriodDataB().size()),
+                     fpsCounter.fps, fpsCounter.coreTemperature);
+            lwk::DrawTextLeftCenter(windowBuffer, buf, 16, 16, Scalar(0, 0, 0));
             if (hwCtlStartTime != 0) {
                 snprintf(buf, 32, "Time=%.03fs", float(getRelativeTimeMs() - hwCtlStartTime) / 1000.0f);
                 lwk::DrawTextLeftCenter(windowBuffer, buf, 16, 32, Scalar(0, 0, 0));
