@@ -10,6 +10,7 @@ public:
 
     virtual ~SerialInterface() = 0;
 
+    [[nodiscard]]
     virtual bool isOpened() const = 0;
 
     virtual void close() = 0;

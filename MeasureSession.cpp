@@ -12,7 +12,7 @@ using cv::Point, cv::Mat;
 constexpr float NaN = NAN;
 
 constexpr std::array<float, 10> WEIGHT_FIRST_CYCLES =
-        {0.0f, 0.0f, 0.05f, 0.1f, 0.15f, 0.20f, 0.3f, 0.4f, 0.5f, 0.7f};
+        {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
 
 void MeasureSession::init(int width, int height) {
     mImageSize = {width, height};
@@ -84,8 +84,11 @@ float MeasureSession::calculateT() const {
             float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
             const Point &p1 = periodData[i - 1].point;
             const Point &p2 = periodData[i].point;
-            auto distance = float(hypot(p1.x - p2.x, p1.y - p2.y));
-            float weight = float(atan(distance / (mImageSize.width / 10)));
+            auto distance = float(abs(p1.x - p2.x));
+            if (distance < 10) {
+                continue;
+            }
+            float weight = 1.0f; // float(atan(distance / (mImageSize.width / 60)));
             float time = float(periodData[i].deltaTimeMs);
             weightedSumT += biasMultiplexer * weight * time;
             weightSum += biasMultiplexer * weight;
@@ -99,7 +102,32 @@ float MeasureSession::calculateT() const {
 }
 
 float MeasureSession::calculateTheta() const {
-    return NaN;
+    float weightedSumA = 0;
+    float weightedSumB = 0;
+    float weightA = 0;
+    float weightB = 0;
+    for (int i = 1; i < mPeriodDataA.size(); i++) {
+        float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
+        const Point &p1 = mPeriodDataA[i - 1].point;
+        const Point &p2 = mPeriodDataA[i].point;
+        float weight = 1.0f;
+        float value = float(abs(p1.x - p2.x));
+        weightedSumA += biasMultiplexer * weight * value;
+        weightA += biasMultiplexer * weight;
+    }
+    for (int i = 1; i < mPeriodDataB.size(); i++) {
+        float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
+        const Point &p1 = mPeriodDataB[i - 1].point;
+        const Point &p2 = mPeriodDataB[i].point;
+        float weight = 1.0f;
+        float value = float(abs(p1.x - p2.x));
+        weightedSumB += biasMultiplexer * weight * value;
+        weightB += biasMultiplexer * weight;
+    }
+    float relA = weightA == 0 ? 0 : (weightedSumA / weightA);
+    float relB = weightB == 0 ? 0 : (weightedSumB / weightB);
+    float resultRad = atan2(relB, relA) * 180.0f / 3.14159265f;
+    return resultRad;
 }
 
 const vector<MeasureSession::EdgeRecord> &MeasureSession::getPeriodDataA() const {

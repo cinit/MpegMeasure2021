@@ -9,10 +9,20 @@
 #include "Recognition.h"
 #include "ui/Widgets.h"
 #include "MeasureSession.h"
+#include "binder/HwManager.h"
+#include "binder/LinuxSerial.h"
 
 using namespace std;
 
+static const char *const SERIAL_DEVICE = "/dev/ttyACM0";
+
 int main() {
+    LinuxSerial serial;
+    if (int err; (err = serial.open(SERIAL_DEVICE)) != 0) {
+        cout << "uanble to open " << SERIAL_DEVICE << ", err=" << err << endl;
+    }
+    HwManager hwManager;
+    hwManager.setSerialManager(&serial);
     while (true) {
         TcpClientSocket serverA;
         TcpClientSocket serverB;
@@ -41,6 +51,8 @@ int main() {
         Mat lastMatB;
         Point lastPointB;
         MeasureSession measureSession;
+        bool showResult = false;
+        uint64_t hwCtlStartTime = 0;
         while (true) {
             uint64_t startTime1 = getRelativeTimeMs();
             cv::Mat imgA = connA.readImage();
@@ -64,7 +76,7 @@ int main() {
                 cv::rectangle(imgA, rect, cv::Scalar(0, 0, 255), i == 0 ? 2 : 1);
                 char buf[32] = {};
                 snprintf(buf, 32, "(%d, %d) %.3f", point.x, point.y, confidence);
-                lwk::DrawTextLeftCenter(imgA, buf, rect.x, rect.y - 16, cv::Scalar(0, 0, 0));
+                lwk::DrawTextLeftCenter(imgA, buf, rect.x, rect.y - 16, cv::Scalar(0, 0, i == 0 ? 255 : 0));
             }
             const auto targetsB = findTargets(imgB, lastMatB, lastPointB);
             for (int i = 0; i < targetsB.size(); i++) {
@@ -72,12 +84,14 @@ int main() {
                 cv::rectangle(imgB, rect, cv::Scalar(0, 0, 255), i == 0 ? 2 : 1);
                 char buf[32] = {};
                 snprintf(buf, 32, "(%d, %d) %.3f", point.x, point.y, confidence);
-                lwk::DrawTextLeftCenter(imgB, buf, rect.x, rect.y - 16, cv::Scalar(0, 0, 0));
+                lwk::DrawTextLeftCenter(imgB, buf, rect.x, rect.y - 16, cv::Scalar(0, 0, i == 0 ? 255 : 0));
             }
             if (!targetsA.empty() && !targetsB.empty()) {
                 const auto &[ra, pa, ca] = targetsA[0];
                 const auto &[rb, pb, cb] = targetsB[0];
-                measureSession.updateFrame(pa, {startTime1, startTime2}, pb, {startTime2, startTime3});
+                if (hwCtlStartTime != 0) {
+                    measureSession.updateFrame(pa, {startTime1, startTime2}, pb, {startTime2, startTime3});
+                }
             }
             if (const auto &periods = measureSession.getPeriodDataA(); !periods.empty()) {
                 for (int i = 0; i < periods.size(); i++) {
@@ -88,7 +102,7 @@ int main() {
                     constexpr auto RIGHT_EDGE = MeasureSession::EdgePointType::RIGHT_EDGE;
                     snprintf(buf, 32, "%d%s:%dms", i, r.type == LEFT_EDGE ? "L" : (r.type == RIGHT_EDGE ? "R" : "?"),
                              r.deltaTimeMs);
-                    lwk::DrawTextCenterH(imgA, buf, r.point.x, r.point.y + 12 + 16 * i, Scalar(255, 0, 0));
+//                    lwk::DrawTextCenterH(imgA, buf, r.point.x, r.point.y + 12 + 16 * i, Scalar(255, 0, 0));
                 }
             }
             if (const auto &periods = measureSession.getPeriodDataB(); !periods.empty()) {
@@ -100,19 +114,46 @@ int main() {
                     constexpr auto RIGHT_EDGE = MeasureSession::EdgePointType::RIGHT_EDGE;
                     snprintf(buf, 32, "%d%s:%dms", i, r.type == LEFT_EDGE ? "L" : (r.type == RIGHT_EDGE ? "R" : "?"),
                              r.deltaTimeMs);
-                    lwk::DrawTextCenterH(imgB, buf, r.point.x, r.point.y + 12 + 16 * i, Scalar(255, 0, 0));
+//                    lwk::DrawTextCenterH(imgB, buf, r.point.x, r.point.y + 12 + 16 * i, Scalar(255, 0, 0));
                 }
             }
-            {
-                float periodTime = measureSession.calculateT() / 1000.0f;
-                float lineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 7.5f;
-                char buf[64];
-                snprintf(buf, 64, "T=%.3fs length=%.1fcm", periodTime, lineLength);
-                lwk::DrawTextLeftCenter(imgA, buf, 16, 16, Scalar(0, 0, 0));
-                lwk::DrawTextLeftCenter(imgB, buf, 16, 16, Scalar(0, 0, 0));
+            float periodTime = measureSession.calculateT() / 1000.0f;
+            float motionDegree = measureSession.calculateTheta();
+            float lineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 7.5f;
+            char buf[64];
+            snprintf(buf, 64, "T= %.3f s  length= %.1f cm theta = %.1f", periodTime, lineLength, motionDegree);
+            lwk::DrawTextLeftCenter(imgA, buf, 16, 16, Scalar(0, 0, 0));
+//                lwk::DrawTextLeftCenter(imgB, buf, 16, 16, Scalar(0, 0, 0));
+
+            Mat windowBuffer = Mat(Size(imgA.cols * 2, imgA.rows), CV_8UC3);
+            imgA.copyTo(windowBuffer(Rect(0, 0, imgA.cols, imgA.rows)));
+            imgB.copyTo(windowBuffer(Rect(imgB.cols, 0, imgB.cols, imgB.rows)));
+            if (showResult) {
+                snprintf(buf, 64, "length= %.1f cm", lineLength);
+                putText(windowBuffer, buf, Point(300, 200), FONT_HERSHEY_TRIPLEX, 2, Scalar(0, 0, 0), 2);
+                snprintf(buf, 64, "theta = %.1f deg", motionDegree);
+                putText(windowBuffer, buf, Point(300, 300), FONT_HERSHEY_TRIPLEX, 2, Scalar(0, 0, 0), 2);
             }
-            imshow("test A", imgA);
-            imshow("test B", imgB);
+            if (hwCtlStartTime != 0) {
+                snprintf(buf, 32, "Time=%.03fs", float(getRelativeTimeMs() - hwCtlStartTime) / 1000.0f);
+                lwk::DrawTextLeftCenter(windowBuffer, buf, 16, 32, Scalar(0, 0, 0));
+            }
+            imshow("MpegMeasure", windowBuffer);
+            HwManager::CmdPacket packet = {};
+            if (hwManager.nextCmdPacketAsync(packet)) {
+                if (packet.cmd == 1) {
+                    hwManager.transactAndWaitForReply(1, 1, 0);
+                } else if (packet.cmd == 2) {
+                    showResult = false;
+                    measureSession.reset();
+                    hwCtlStartTime = getRelativeTimeMs();
+                }
+            }
+            if (hwCtlStartTime != 0 && (getRelativeTimeMs() - hwCtlStartTime) >= 25000) {
+                hwManager.transactAndWaitForReply(3, 5);
+                hwCtlStartTime = 0;
+                showResult = true;
+            }
             if (cv::waitKey(1) == 'q') {
                 exit(0);
             }

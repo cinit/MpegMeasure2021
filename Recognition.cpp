@@ -12,7 +12,7 @@
 using namespace cv;
 using namespace std;
 
-constexpr int REF_LP_HEIGHT_PX = 55; // height in px
+constexpr int REF_LP_HEIGHT_PX = 57; // height in px
 
 vector<tuple<Rect, Point, float>> findTargets(const Mat &rawImage, Mat &lastBlurGreyFrame, cv::Point &lastPoint) {
     const int STEP_X = rawImage.cols / 20;
@@ -41,6 +41,17 @@ vector<tuple<Rect, Point, float>> findTargets(const Mat &rawImage, Mat &lastBlur
     th = (th / 2 + 70) / 2;
 //    cout << "th" << th << endl;
     threshold(blurGreyImg, binaryImg, th, 255, THRESH_BINARY_INV);
+//    {
+//        Mat hsvImg;
+//        cvtColor(rawImage, hsvImg, COLOR_BGR2HSV);
+//        Mat splitHsvImg[3];
+//        split(hsvImg, splitHsvImg);
+//        Mat saturationImg = splitHsvImg[2];
+//        Mat saturateBinary;
+//        threshold(saturationImg, saturateBinary, 120, 255, THRESH_BINARY_INV);
+//        imshow("satu", saturationImg);
+//        imshow("satu bin", saturateBinary);
+//    }
     Mat tmp;
     erode(binaryImg, tmp, getStructuringElement(MORPH_ELLIPSE, Size(3, 3)));
     dilate(tmp, binaryImg, getStructuringElement(MORPH_ELLIPSE, Size(3, 3)));
@@ -68,7 +79,7 @@ vector<tuple<Rect, Point, float>> findTargets(const Mat &rawImage, Mat &lastBlur
             continue;
         }
         float hwRatio = float(r.height) / float(r.width);
-        if (hwRatio < 1.2f || hwRatio > 5.0f) {
+        if (hwRatio < 1.2f || hwRatio > 7.0f) {
             continue;
         }
         vector<Point> hull;
@@ -96,7 +107,7 @@ vector<tuple<Rect, Point, float>> findTargets(const Mat &rawImage, Mat &lastBlur
 //            printf("%d, %0.2f\n", distance, proxiMultiplexer);
         }
         float confidence = 10.0f * max(1.0f - float(abs(r.height - REF_LP_HEIGHT_PX) / 40.0f), 0.3f)
-                           * pow(1.0f - abs(3.0f - hwRatio), 1.0f)
+                           * pow(1.0f - abs(3.6f - hwRatio), 1.0f)
                            * pow(cntArea / float(r.width) / float(r.height), 1.0f)
                            * pow(cntArea / hullArea, 2.0f)
                            * motionMultiplexer * proxiMultiplexer;

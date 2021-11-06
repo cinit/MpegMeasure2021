@@ -9,15 +9,10 @@
 
 class LinuxSerial : public SerialInterface {
 public:
+    [[nodiscard]]
+    int open(const char *name);
 
-    LinuxSerial();
-
-    explicit LinuxSerial(const char *name);
-
-    LinuxSerial(LinuxSerial &that);
-
-    ~LinuxSerial() override;
-
+    [[nodiscard]]
     bool isOpened() const override;
 
     void close() override;
@@ -27,7 +22,7 @@ public:
     int receive(void *buf, int maxLength) override;
 
 private:
-    int serialFd;
+    int serialFd = -1;
 };
 
 #endif //ENGINEERTRAINUPPERCTL_LINUXSERIAL_H
