@@ -171,6 +171,31 @@ int main() {
                 snprintf(buf, 32, "Time=%.03fs", float(getRelativeTimeMs() - hwCtlStartTime) / 1000.0f);
                 lwk::DrawTextLeftCenter(windowBuffer, buf, 16, 32, Scalar(0, 0, 0));
             }
+            {
+                int usableWidth = windowBuffer.cols - 100;
+                int startX = 16;
+                float dXpMs = float(usableWidth) / float(2000);
+                for (int i = 0; i < 2; ++i) {
+                    const auto &epochs = (i == 0) ? measureSession.getPeriodDataA() : measureSession.getPeriodDataB();
+                    Scalar color = (i == 0) ? Scalar(0, 255, 0) : Scalar(255, 0, 0);
+                    int startY = windowBuffer.rows - 48 + i * 16;
+                    lwk::DrawTextLeftCenter(windowBuffer, i == 0 ? "A" : "B", 8, startY, color);
+                    for (const auto &epoch: epochs) {
+                        constexpr auto RIGHT_EDGE = MeasureSession::EdgePointType::RIGHT_EDGE;
+                        constexpr auto LEFT_EDGE = MeasureSession::EdgePointType::LEFT_EDGE;
+                        const char *typeName = epoch.type == RIGHT_EDGE ? ">" : (epoch.type == LEFT_EDGE ? "<" : "?");
+                        int targetX = startX + int(dXpMs * float(min(2000, epoch.deltaTimeMs)));
+                        lwk::DrawTextLeftCenter(windowBuffer, typeName, targetX, startY, color);
+                    }
+                }
+                for (int i = 0; i < 2000; i += 100) {
+                    auto color = Scalar(0, 0, 0);
+                    int startY = windowBuffer.rows - 16;
+                    int targetX = startX + int(dXpMs * float(min(2000, i)));
+                    snprintf(buf, 32, "%d", i);
+                    lwk::DrawTextLeftCenter(windowBuffer, i == 0 ? "T/2" : buf, targetX, startY, color);
+                }
+            }
             imshow("MpegMeasure", windowBuffer);
             HwManager::CmdPacket packet = {};
             if (hwManager.nextCmdPacketAsync(packet)) {
