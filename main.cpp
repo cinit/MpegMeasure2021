@@ -105,7 +105,7 @@ int main() {
             }
             {
                 float periodTime = measureSession.calculateT() / 1000.0f;
-                float lineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 3.5f;
+                float lineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 7.5f;
                 char buf[64];
                 snprintf(buf, 64, "T=%.3fs length=%.1fcm", periodTime, lineLength);
                 lwk::DrawTextLeftCenter(imgA, buf, 16, 16, Scalar(0, 0, 0));

@@ -11,7 +11,8 @@ using cv::Point, cv::Mat;
 
 constexpr float NaN = NAN;
 
-constexpr std::array<float, 5> WEIGHT_FIRST_CYCLES = {0.0f, 0.1f, 0.3f, 0.5f, 0.7f};
+constexpr std::array<float, 10> WEIGHT_FIRST_CYCLES =
+        {0.0f, 0.0f, 0.05f, 0.1f, 0.15f, 0.20f, 0.3f, 0.4f, 0.5f, 0.7f};
 
 void MeasureSession::init(int width, int height) {
     mImageSize = {width, height};
@@ -84,7 +85,7 @@ float MeasureSession::calculateT() const {
             const Point &p1 = periodData[i - 1].point;
             const Point &p2 = periodData[i].point;
             auto distance = float(hypot(p1.x - p2.x, p1.y - p2.y));
-            float weight = float(atan(distance / (mImageSize.width / 4)));
+            float weight = float(atan(distance / (mImageSize.width / 10)));
             float time = float(periodData[i].deltaTimeMs);
             weightedSumT += biasMultiplexer * weight * time;
             weightSum += biasMultiplexer * weight;
