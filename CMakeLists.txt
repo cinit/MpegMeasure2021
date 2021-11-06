@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.10)
 project(MpegMeasure2021)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -11,12 +11,14 @@ set(CMAKE_CXX_STANDARD 17)
 # opencv的所有lib
 set(OPENCV_LIB opencv_imgcodecs opencv_calib3d opencv_core opencv_features2d opencv_flann opencv_highgui
         opencv_imgproc opencv_ml opencv_objdetect opencv_photo opencv_stitching
-        opencv_superres opencv_video opencv_videoio opencv_videostab pthread m dl)
+        opencv_video opencv_videoio pthread m dl)
+# nano do not have opencv_superres opencv_videostab
 # opencv_contrib opencv_gpu opencv_legacy opencv_nonfree opencv_ocl opencv_ts
 # include_direcctory 和 link_directorys 必须在定义相关的target(add_executable or add_library)之前
 # target不会到在他后面定义的directory中寻找.h文件和.lib文件，因此错序可能会报错
 # 指定搜索.h file的目录
 include_directories("/usr/local/include/opencv4")     # include directory for all targets
+include_directories("/usr/include/opencv4") # Jetson Nano
 # target_include_directories(target dir1 dir2 ...)                  # include directory for specified target
 
 # 指定搜索.lib file的目录

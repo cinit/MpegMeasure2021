@@ -126,6 +126,9 @@ float MeasureSession::calculateTheta() const {
     }
     float relA = weightA == 0 ? 0 : (weightedSumA / weightA);
     float relB = weightB == 0 ? 0 : (weightedSumB / weightB);
+    if (relA == 0 && relB == 0) {
+        return NaN;
+    }
     float resultRad = atan2(relB, relA) * 180.0f / 3.14159265f;
     return resultRad;
 }
