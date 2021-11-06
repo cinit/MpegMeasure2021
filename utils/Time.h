@@ -9,4 +9,6 @@
 
 uint64_t getRelativeTimeMs();
 
+int getCpuTemperature();
+
 #endif //MPEGMEASURE2021_TIME_H

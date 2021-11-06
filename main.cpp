@@ -1,5 +1,6 @@
 #include <iostream>
 #include <unistd.h>
+#include <cmath>
 #include <opencv2/opencv.hpp>
 
 #include "MeasureView.h"
@@ -73,6 +74,7 @@ int main() {
             uint64_t lastTime = 0;
             int counter = 0;
             int fps = 0;
+            float coreTemperature = 0.0f;
         } fpsCounter;
         while (true) {
             uint64_t startTime1 = getRelativeTimeMs();
@@ -85,6 +87,8 @@ int main() {
                 fpsCounter.fps = fpsCounter.counter;
                 fpsCounter.counter = 0;
                 fpsCounter.lastTime = startTime1;
+                int temp = getCpuTemperature();
+                fpsCounter.coreTemperature = temp > 0 ? (float(temp) / 1000.0f) : NAN;
             }
             if (imgA.empty()) {
                 cout << "read img error" << endl;
@@ -148,8 +152,8 @@ int main() {
             float motionDegree = measureSession.calculateTheta();
             float lineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 7.5f;
             char buf[64];
-            snprintf(buf, 64, "T= %.3f s | length= %.1f cm | theta= %.1f | %d fps",
-                     periodTime, lineLength, motionDegree, fpsCounter.fps);
+            snprintf(buf, 64, "T= %.3f s | length= %.1f cm | theta= %.1f | %d fps | %.1f'C",
+                     periodTime, lineLength, motionDegree, fpsCounter.fps, fpsCounter.coreTemperature);
             lwk::DrawTextLeftCenter(imgA, buf, 16, 16, Scalar(0, 0, 0));
 //                lwk::DrawTextLeftCenter(imgB, buf, 16, 16, Scalar(0, 0, 0));
 
