@@ -77,27 +77,57 @@ void MeasureSession::reset() {
 }
 
 float MeasureSession::calculateT() const {
-    float weightedSumT = 0;
-    float weightSum = 0;
-    for (const std::vector<EdgeRecord> &periodData: {mPeriodDataA, mPeriodDataB}) {
-        for (int i = 1; i < periodData.size(); i++) {
-            float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
-            const Point &p1 = periodData[i - 1].point;
-            const Point &p2 = periodData[i].point;
-            auto distance = float(abs(p1.x - p2.x));
-            if (distance < 5) {
-                continue;
+    float roughHalfT;
+    {
+        float weightedSumT = 0;
+        float weightSum = 0;
+        for (const std::vector<EdgeRecord> &periodData: {mPeriodDataA, mPeriodDataB}) {
+            for (int i = 1; i < periodData.size(); i++) {
+                float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
+                const Point &p1 = periodData[i - 1].point;
+                const Point &p2 = periodData[i].point;
+                auto distance = float(abs(p1.x - p2.x));
+                if (distance < 5) {
+                    continue;
+                }
+                float weight = 1.0f;
+                float time = float(periodData[i].deltaTimeMs);
+                weightedSumT += biasMultiplexer * weight * time;
+                weightSum += biasMultiplexer * weight;
             }
-            float weight = 1.0f; // float(atan(distance / (mImageSize.width / 60)));
-            float time = float(periodData[i].deltaTimeMs);
-            weightedSumT += biasMultiplexer * weight * time;
-            weightSum += biasMultiplexer * weight;
+        }
+        if (weightedSumT == 0 || weightSum == 0) {
+            roughHalfT = NaN;
+        } else {
+            roughHalfT = weightedSumT / weightSum;
         }
     }
-    if (weightedSumT == 0 || weightSum == 0) {
-        return NaN;
-    } else {
-        return weightedSumT / weightSum * 2.0f;
+    {
+        float weightedSumT = 0;
+        float weightSum = 0;
+        for (const std::vector<EdgeRecord> &periodData: {mPeriodDataA, mPeriodDataB}) {
+            for (int i = 1; i < periodData.size(); i++) {
+                float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
+                const Point &p1 = periodData[i - 1].point;
+                const Point &p2 = periodData[i].point;
+                auto distance = float(abs(p1.x - p2.x));
+                if (distance < 5) {
+                    continue;
+                }
+                float weight = 1.0f;
+                float time = float(periodData[i].deltaTimeMs);
+                if (time > roughHalfT * 1.5f || time < roughHalfT * 0.6f) {
+                    continue;
+                }
+                weightedSumT += biasMultiplexer * weight * time;
+                weightSum += biasMultiplexer * weight;
+            }
+        }
+        if (weightedSumT == 0 || weightSum == 0) {
+            return NaN;
+        } else {
+            return weightedSumT / weightSum * 2.0f;
+        }
     }
 }
 
