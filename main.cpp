@@ -28,6 +28,9 @@ int main() {
             if (int err; (err = serial.open(path) != 0)) {
                 cout << "unable to open serial port" << path << " , err=" << err << endl;
             }
+            if (serial.isOpened()) {
+                break;
+            }
         }
     }
     if (!serial.isOpened()) {
