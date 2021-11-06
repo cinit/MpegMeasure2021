@@ -49,12 +49,12 @@ vector<tuple<Rect, Point, float>> findTargets(const Mat &rawImage, Mat &lastBlur
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
     findContours(binaryImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-    imshow("te", binaryImg);
+//    imshow("te", binaryImg);
     vector<tuple<vector<Point>, Rect, float>> candidateContours;
     Mat diffImg;
     if (!lastBlurGreyFrame.empty()) {
         absdiff(blurGreyImg, lastBlurGreyFrame, diffImg);
-        imshow("diff", diffImg);
+//        imshow("diff", diffImg);
     }
     for (const auto &contour: contours) {
         Rect r = boundingRect(contour);
@@ -90,16 +90,7 @@ vector<tuple<Rect, Point, float>> findTargets(const Mat &rawImage, Mat &lastBlur
         }
         float proxiMultiplexer = 1.0f;
         if (lastPoint.x >= 1 && lastPoint.y >= 1) {
-            Mat points(contour);
-            Moments moment = moments(points, true);
-            Point center;
-            if (moment.m00 != 0) {
-                int x = cvRound(moment.m10 / moment.m00);
-                int y = cvRound(moment.m01 / moment.m00);
-                center = Point(x, y);
-            } else {
-                continue;
-            }
+            Point center = Point(r.x + r.width / 2, r.y + r.height / 2);
             auto distance = int(hypot(lastPoint.x - center.x, lastPoint.y - center.y));
             proxiMultiplexer = 1.0f / (1.0f + pow(float(distance) / (rawImage.cols / 2), 2.0f));
 //            printf("%d, %0.2f\n", distance, proxiMultiplexer);
@@ -117,13 +108,8 @@ vector<tuple<Rect, Point, float>> findTargets(const Mat &rawImage, Mat &lastBlur
     }
     vector<tuple<Rect, Point, float>> resultSet;
     for (const auto&[con, r, c]: candidateContours) {
-        Mat points(con);
-        Moments moment = moments(points, true);
-        if (moment.m00 != 0) {
-            int x = cvRound(moment.m10 / moment.m00);
-            int y = cvRound(moment.m01 / moment.m00);
-            resultSet.emplace_back(r, Point(x, y), c);
-        }
+        Point center = Point(r.x + r.width / 2, r.y + r.height / 2);
+        resultSet.emplace_back(r, center, c);
     }
     sort(resultSet.begin(), resultSet.end(),
          [](const tuple<Rect, Point, float> &a, const tuple<Rect, Point, float> &b) {

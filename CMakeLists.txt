@@ -33,7 +33,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type")
 set(SOURCE_FILES main.cpp
         ui/Widgets.cpp ui/VgaFont.cpp ui/Fixedsys.c utils/Time.cpp mmtcp/TcpClientSocket.cpp
         binder/LinuxSerial.cpp binder/SerialInterface.cpp mmtcp/MmTcp.cpp mmtcp/TcpServerSocket.cpp
-        MeasureView.cpp MeasureView.h Recognition.cpp MeasureCore.cpp)
+        MeasureView.cpp MeasureView.h Recognition.cpp MeasureSession.cpp)
 
 add_executable(MpegMeasure2021 ${SOURCE_FILES})         # compiler sources to a exe named target, not a library
 
