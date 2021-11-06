@@ -14,12 +14,25 @@
 
 using namespace std;
 
-static const char *const SERIAL_DEVICE = "/dev/ttyACM0";
+static const std::array<const char *, 4> SERIAL_DEVICES = {
+        "/dev/ttyUSB0",
+        "/dev/ttyACM0",
+        "/dev/ttyUSB1",
+        "/dev/ttyACM1",
+};
 
 int main() {
     LinuxSerial serial;
-    if (int err; (err = serial.open(SERIAL_DEVICE)) != 0) {
-        cout << "uanble to open " << SERIAL_DEVICE << ", err=" << err << endl;
+    for (const char *path: SERIAL_DEVICES) {
+        if (access(path, F_OK) == 0) {
+            if (int err; (err = serial.open(path) != 0)) {
+                cout << "unable to open serial port" << path << " , err=" << err << endl;
+            }
+        }
+    }
+    if (!serial.isOpened()) {
+        cerr << "unable to open any serial port!" << endl;
+        exit(1);
     }
     HwManager hwManager;
     hwManager.setSerialManager(&serial);
