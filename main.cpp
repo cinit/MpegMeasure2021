@@ -223,11 +223,15 @@ int main() {
                 }
             }
             imshow(AIO_WINDOW_NAME, windowBuffer);
+            int keyCode = cv::waitKey(1);
+            if (keyCode == 'q') {
+                exit(0);
+            }
             HwManager::CmdPacket packet = {};
-            if (hwManager.nextCmdPacketAsync(packet)) {
+            if (hwManager.nextCmdPacketAsync(packet) || keyCode == 'm' || keyCode == 'M') {
                 if (packet.cmd == 1) {
                     hwManager.transactAndWaitForReply(1, 1, 0);
-                } else if (packet.cmd == 2) {
+                } else if (packet.cmd == 2 || keyCode == 'm' || keyCode == 'M') {
                     showResult = false;
                     measureSession.reset();
                     hwCtlStartTime = getRelativeTimeMs();
@@ -237,9 +241,6 @@ int main() {
                 hwManager.transactAndWaitForReply(3, 5);
                 hwCtlStartTime = 0;
                 showResult = true;
-            }
-            if (cv::waitKey(1) == 'q') {
-                exit(0);
             }
         }
         usleep(100000);
