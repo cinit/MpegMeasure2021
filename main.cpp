@@ -22,6 +22,8 @@ static const std::array<const char *, 4> SERIAL_DEVICES = {
         "/dev/ttyACM1",
 };
 
+static const char *const AIO_WINDOW_NAME = "MpegMeasure";
+
 int main() {
     LinuxSerial serial;
     for (const char *path: SERIAL_DEVICES) {
@@ -40,6 +42,8 @@ int main() {
     }
     HwManager hwManager;
     hwManager.setSerialManager(&serial);
+    namedWindow(AIO_WINDOW_NAME);
+    moveWindow(AIO_WINDOW_NAME, 0, 60);
     while (true) {
         TcpClientSocket serverA;
         TcpClientSocket serverB;
@@ -196,7 +200,7 @@ int main() {
                     lwk::DrawTextLeftCenter(windowBuffer, i == 0 ? "T/2" : buf, targetX, startY, color);
                 }
             }
-            imshow("MpegMeasure", windowBuffer);
+            imshow(AIO_WINDOW_NAME, windowBuffer);
             HwManager::CmdPacket packet = {};
             if (hwManager.nextCmdPacketAsync(packet)) {
                 if (packet.cmd == 1) {
