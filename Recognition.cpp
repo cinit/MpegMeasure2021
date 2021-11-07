@@ -103,7 +103,7 @@ vector<tuple<Rect, Point, float>> findTargets(const Mat &rawImage, Mat &lastBlur
         if (lastPoint.x >= 1 && lastPoint.y >= 1) {
             Point center = Point(r.x + r.width / 2, r.y + r.height / 2);
             auto distance = int(hypot(lastPoint.x - center.x, lastPoint.y - center.y));
-            proxiMultiplexer = 1.0f / (1.0f + pow(float(distance) / (rawImage.cols / 2), 2.0f));
+            proxiMultiplexer = 1.0f / (1.0f + pow(float(distance) / (rawImage.cols / 6), 2.0f));
 //            printf("%d, %0.2f\n", distance, proxiMultiplexer);
         }
         float confidence = 10.0f * max(1.0f - float(abs(r.height - REF_LP_HEIGHT_PX) / 40.0f), 0.3f)
