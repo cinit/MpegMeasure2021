@@ -166,8 +166,8 @@ int main() {
             }
             float periodTime = measureSession.calculateT() / 1000.0f;
             float motionDegree = measureSession.calculateTheta();
-            float rawLineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 7.5f;
-            float lineLength = 0.9881f * rawLineLength + 0.9509f;
+            float lineLength = 100.0f * 0.24836f * pow(periodTime, 2.0f) - 7.5f;
+            float fakeLineLength = 0.9881f * lineLength + 0.9509f;
             char buf[256];
             Mat windowBuffer = Mat(Size(imgA.cols * 2, imgA.rows), CV_8UC3);
             imgA.copyTo(windowBuffer(Rect(0, 0, imgA.cols, imgA.rows)));
@@ -179,7 +179,7 @@ int main() {
                 putText(windowBuffer, buf, Point(300, 300), FONT_HERSHEY_TRIPLEX, 2, Scalar(0, 0, 0), 2);
             }
             snprintf(buf, 256, "T= %.3f s | length= %.1f(%.1f) cm | theta= %.1f | %d/%d epoch(s) | %d fps | %.1f'C",
-                     periodTime, lineLength, rawLineLength, motionDegree,
+                     periodTime, lineLength, fakeLineLength, motionDegree,
                      int(measureSession.getPeriodDataA().size()), int(measureSession.getPeriodDataB().size()),
                      fpsCounter.fps, fpsCounter.coreTemperature);
             lwk::DrawTextLeftCenter(windowBuffer, buf, 16, 16, Scalar(0, 0, 0));
