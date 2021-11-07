@@ -5,7 +5,7 @@
 
 #include "MeasureView.h"
 #include "mmtcp/TcpClientSocket.h"
-#include "mmtcp/MmTcp.h"
+#include "mmtcp/MmTcpV2.h"
 #include "utils/Time.h"
 #include "Recognition.h"
 #include "ui/Widgets.h"
@@ -47,17 +47,17 @@ int main() {
     while (true) {
         TcpClientSocket serverA;
         TcpClientSocket serverB;
-        MmTcp connA;
-        MmTcp connB;
+        MmTcpV2 connA;
+        MmTcpV2 connB;
         {
             int err;
-            err = serverA.connectToIpV4("192.168.24.205", 8001);
+            err = serverA.connectToIpV4("192.168.24.205", 8003);
             if (err < 0) {
                 cout << "unable to connect to A :" << err << endl;
                 usleep(1000000);
                 continue;
             }
-            err = serverB.connectToIpV4("192.168.24.206", 8001);
+            err = serverB.connectToIpV4("192.168.24.206", 8003);
             if (err < 0) {
                 cout << "unable to connect to B :" << err << endl;
                 usleep(1000000);
@@ -82,10 +82,19 @@ int main() {
         } fpsCounter;
         while (true) {
             uint64_t startTime1 = getRelativeTimeMs();
-            cv::Mat imgA = connA.readImage();
-            uint64_t startTime2 = getRelativeTimeMs();
-            cv::Mat imgB = connB.readImage();
-            uint64_t startTime3 = getRelativeTimeMs();
+            struct {
+                cv::Mat img;
+                uint64_t frameTime;
+                uint32_t frameCost;
+            } imgInfoA, imgInfoB;
+            if (connA.readImage(imgInfoA.img, imgInfoA.frameTime, imgInfoA.frameCost) != 0) {
+                cout << "raed A error" << endl;
+                break;
+            }
+            if (connB.readImage(imgInfoB.img, imgInfoB.frameTime, imgInfoB.frameCost) != 0) {
+                cout << "raed B error" << endl;
+                break;
+            }
             fpsCounter.counter++;
             if (startTime1 - fpsCounter.lastTime >= 1000) {
                 fpsCounter.fps = fpsCounter.counter;
@@ -94,6 +103,8 @@ int main() {
                 int temp = getCpuTemperature();
                 fpsCounter.coreTemperature = temp > 0 ? (float(temp) / 1000.0f) : NAN;
             }
+            cv::Mat &imgA = imgInfoA.img;
+            cv::Mat &imgB = imgInfoB.img;
             if (imgA.empty()) {
                 cout << "read img error" << endl;
                 break;
@@ -125,7 +136,8 @@ int main() {
                 const auto &[ra, pa, ca] = targetsA[0];
                 const auto &[rb, pb, cb] = targetsB[0];
                 if (hwCtlStartTime != 0) {
-                    measureSession.updateFrame(pa, {startTime1, startTime2}, pb, {startTime2, startTime3});
+                    measureSession.updateFrame(pa, {imgInfoA.frameTime, imgInfoA.frameTime + imgInfoA.frameCost},
+                                               pb, {imgInfoB.frameTime, imgInfoB.frameTime + imgInfoB.frameCost});
                 }
             }
             if (const auto &periods = measureSession.getPeriodDataA(); !periods.empty()) {
