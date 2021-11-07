@@ -11,4 +11,6 @@ uint64_t getRelativeTimeMs();
 
 int getCpuTemperature();
 
+bool testIpPort(const char *ip, uint16_t port);
+
 #endif //MPEGMEASURE2021_TIME_H

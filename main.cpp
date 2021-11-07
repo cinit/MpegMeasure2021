@@ -23,27 +23,67 @@ static const std::array<const char *, 4> SERIAL_DEVICES = {
 };
 
 static const char *const AIO_WINDOW_NAME = "MpegMeasure";
+static const char *const IP_NODE_A = "192.168.24.205";
+static const char *const IP_NODE_B = "192.168.24.206";
+static constexpr uint16_t NODE_PORT = 8003;
+
+class TargetStatusInfo {
+public:
+    bool serialStatus = false;
+    bool nodeStatusA = false;
+    bool nodeStatusB = false;
+
+    [[nodiscard]]
+    inline bool isReady() const noexcept {
+        return (serialStatus)
+               && (nodeStatusA)
+               && (nodeStatusB);
+    }
+};
 
 int main() {
     LinuxSerial serial;
-    for (const char *path: SERIAL_DEVICES) {
-        if (access(path, F_OK) == 0) {
-            if (int err; (err = serial.open(path) != 0)) {
-                cout << "unable to open serial port" << path << " , err=" << err << endl;
+    namedWindow(AIO_WINDOW_NAME);
+    moveWindow(AIO_WINDOW_NAME, 0, 60);
+    {
+        int retry = 0;
+        while (true) {
+            retry++;
+            TargetStatusInfo info;
+            if (!serial.isOpened()) {
+                for (const char *path: SERIAL_DEVICES) {
+                    if (access(path, F_OK) == 0) {
+                        if (int err; (err = serial.open(path) != 0)) {
+                            cout << "unable to open serial port" << path << " , err=" << err << endl;
+                        }
+                        if (serial.isOpened()) {
+                            break;
+                        }
+                    }
+                }
             }
-            if (serial.isOpened()) {
+            info.serialStatus = serial.isOpened();
+            info.nodeStatusA = testIpPort(IP_NODE_A, 22);
+            info.nodeStatusB = testIpPort(IP_NODE_B, 22);
+            if (info.isReady()) {
                 break;
             }
+            serial.close();
+            cv::Mat tmpBuf(cv::Size(600, 600), CV_8UC3, cv::Scalar(0, 0, 0));
+            char buf[256] = {};
+            Scalar color = Scalar(255, 255, 255);
+            lwk::DrawTextLeftCenter(tmpBuf, (info.serialStatus ? "serial: true" : "serial: FALSE"), 32, 32, color);
+            lwk::DrawTextLeftCenter(tmpBuf, (info.nodeStatusA ? "A: true" : "A: FALSE"), 32, 64, color);
+            lwk::DrawTextLeftCenter(tmpBuf, (info.nodeStatusB ? "B: true" : "B: FALSE"), 32, 96, color);
+            snprintf(buf, 64, "retry = %d", retry);
+            lwk::DrawTextLeftCenter(tmpBuf, buf, 32, 128, color);
+            imshow(AIO_WINDOW_NAME, tmpBuf);
+            waitKey(1);
+            usleep(100000);
         }
-    }
-    if (!serial.isOpened()) {
-        cerr << "unable to open any serial port!" << endl;
-        exit(1);
     }
     HwManager hwManager;
     hwManager.setSerialManager(&serial);
-    namedWindow(AIO_WINDOW_NAME);
-    moveWindow(AIO_WINDOW_NAME, 0, 60);
     while (true) {
         TcpClientSocket serverA;
         TcpClientSocket serverB;
@@ -51,13 +91,13 @@ int main() {
         MmTcpV2 connB;
         {
             int err;
-            err = serverA.connectToIpV4("192.168.24.205", 8003);
+            err = serverA.connectToIpV4(IP_NODE_A, NODE_PORT);
             if (err < 0) {
                 cout << "unable to connect to A :" << err << endl;
                 usleep(1000000);
                 continue;
             }
-            err = serverB.connectToIpV4("192.168.24.206", 8003);
+            err = serverB.connectToIpV4(IP_NODE_B, NODE_PORT);
             if (err < 0) {
                 cout << "unable to connect to B :" << err << endl;
                 usleep(1000000);
