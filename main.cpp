@@ -108,7 +108,7 @@ int main() {
             const auto targetsA = findTargets(imgA, lastMatA, lastPointA);
             for (int i = 0; i < targetsA.size(); i++) {
                 auto const &[rect, point, confidence] = targetsA[i];
-                cv::rectangle(imgA, rect, cv::Scalar(0, 0, 255), i == 0 ? 2 : 1);
+                cv::rectangle(imgA, rect, cv::Scalar(0, 0, i == 0 ? 255 : 0), i == 0 ? 2 : 1);
                 char buf[32] = {};
                 snprintf(buf, 32, "(%d, %d) %.3f", point.x, point.y, confidence);
                 lwk::DrawTextLeftCenter(imgA, buf, rect.x, rect.y - 16, cv::Scalar(0, 0, i == 0 ? 255 : 0));
@@ -116,7 +116,7 @@ int main() {
             const auto targetsB = findTargets(imgB, lastMatB, lastPointB);
             for (int i = 0; i < targetsB.size(); i++) {
                 auto const &[rect, point, confidence] = targetsB[i];
-                cv::rectangle(imgB, rect, cv::Scalar(0, 0, 255), i == 0 ? 2 : 1);
+                cv::rectangle(imgB, rect, cv::Scalar(0, 0, i == 0 ? 255 : 0), i == 0 ? 2 : 1);
                 char buf[32] = {};
                 snprintf(buf, 32, "(%d, %d) %.3f", point.x, point.y, confidence);
                 lwk::DrawTextLeftCenter(imgB, buf, rect.x, rect.y - 16, cv::Scalar(0, 0, i == 0 ? 255 : 0));
@@ -179,6 +179,16 @@ int main() {
                 int usableWidth = windowBuffer.cols - 100;
                 int startX = 16;
                 float dXpMs = float(usableWidth) / float(2000);
+                if (periodTime > 0) {
+                    // measure line
+                    Scalar color = Scalar(255, 255, 255);
+                    float halfTMs = periodTime * 1000.0f / 2.0f;
+                    int targetX = startX + int(dXpMs * float(min(2000.0f, halfTMs)));
+                    snprintf(buf, 32, "%.1f", halfTMs);
+                    lwk::DrawTextLeftCenter(windowBuffer, buf, targetX, windowBuffer.rows - 48 - 16, color);
+                    cv::line(windowBuffer, Point(targetX, windowBuffer.rows - 48),
+                             Point(targetX, windowBuffer.rows - 48 + 32), color, 1);
+                }
                 for (int i = 0; i < 2; ++i) {
                     const auto &epochs = (i == 0) ? measureSession.getPeriodDataA() : measureSession.getPeriodDataB();
                     Scalar color = (i == 0) ? Scalar(0, 255, 0) : Scalar(255, 0, 0);
