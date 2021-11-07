@@ -78,10 +78,23 @@ void MeasureSession::reset() {
 
 float MeasureSession::calculateT() const {
     float roughHalfT;
+    std::vector<const std::vector<EdgeRecord> *> targetRecordSets;
+    float thetaDeg = calculateTheta();
+    if (!isnan(thetaDeg) && thetaDeg > 80) {
+        // use A only
+        targetRecordSets.push_back(&mPeriodDataA);
+    } else if (!isnan(thetaDeg) && thetaDeg < 10) {
+        // use B only
+        targetRecordSets.push_back(&mPeriodDataB);
+    } else {
+        targetRecordSets.push_back(&mPeriodDataA);
+        targetRecordSets.push_back(&mPeriodDataB);
+    }
     {
         float weightedSumT = 0;
         float weightSum = 0;
-        for (const std::vector<EdgeRecord> &periodData: {mPeriodDataA, mPeriodDataB}) {
+        for (const std::vector<EdgeRecord> *pPeriodData: targetRecordSets) {
+            const std::vector<EdgeRecord> &periodData = *pPeriodData;
             for (int i = 1; i < periodData.size(); i++) {
                 float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
                 const Point &p1 = periodData[i - 1].point;
@@ -105,7 +118,8 @@ float MeasureSession::calculateT() const {
     {
         float weightedSumT = 0;
         float weightSum = 0;
-        for (const std::vector<EdgeRecord> &periodData: {mPeriodDataA, mPeriodDataB}) {
+        for (const std::vector<EdgeRecord> *pPeriodData: targetRecordSets) {
+            const std::vector<EdgeRecord> &periodData = *pPeriodData;
             for (int i = 1; i < periodData.size(); i++) {
                 float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
                 const Point &p1 = periodData[i - 1].point;
@@ -159,7 +173,7 @@ float MeasureSession::calculateTheta() const {
     if (relA == 0 && relB == 0) {
         return NaN;
     }
-    float resultRad = atan2(relB, relA) * 180.0f / 3.14159265f;
+    float resultRad = atan2(relA, relB) * 180.0f / 3.14159265f;
     return resultRad;
 }
 
