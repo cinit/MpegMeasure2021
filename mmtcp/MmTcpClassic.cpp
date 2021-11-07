@@ -7,9 +7,9 @@
 #include <cstdint>
 #include <unistd.h>
 
-#include "MmTcp.h"
+#include "MmTcpClassic.h"
 
-cv::Mat MmTcp::readImage() {
+cv::Mat MmTcpClassic::readImage() {
     if (mSocketFd == -1) {
         return {};
     } else {
@@ -32,20 +32,20 @@ cv::Mat MmTcp::readImage() {
     }
 }
 
-void MmTcp::close() {
+void MmTcpClassic::close() {
     ::close(mSocketFd);
     mSocketFd = -1;
 }
 
-int MmTcp::getSocket() const {
+int MmTcpClassic::getSocket() const {
     return mSocketFd;
 }
 
-void MmTcp::setSocket(int fd) {
+void MmTcpClassic::setSocket(int fd) {
     mSocketFd = fd;
 }
 
-int MmTcp::readExactly(void *buffer, int length) {
+int MmTcpClassic::readExactly(void *buffer, int length) {
     int r = 0;
     int i = 0;
     while ((i = int(read(mSocketFd, static_cast<char *>(buffer) + r, length - r))) > 0) {
