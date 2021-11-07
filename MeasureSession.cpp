@@ -77,7 +77,6 @@ void MeasureSession::reset() {
 }
 
 float MeasureSession::calculateT() const {
-    float roughHalfT;
     std::vector<const std::vector<EdgeRecord> *> targetRecordSets;
     float thetaDeg = calculateTheta();
     if (!isnan(thetaDeg) && thetaDeg > 80) {
@@ -90,58 +89,47 @@ float MeasureSession::calculateT() const {
         targetRecordSets.push_back(&mPeriodDataA);
         targetRecordSets.push_back(&mPeriodDataB);
     }
-    {
-        float weightedSumT = 0;
-        float weightSum = 0;
-        for (const std::vector<EdgeRecord> *pPeriodData: targetRecordSets) {
-            const std::vector<EdgeRecord> &periodData = *pPeriodData;
-            for (int i = 1; i < periodData.size(); i++) {
-                float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
-                const Point &p1 = periodData[i - 1].point;
-                const Point &p2 = periodData[i].point;
-                auto distance = float(abs(p1.x - p2.x));
-                if (distance < 5) {
-                    continue;
-                }
-                float weight = 1.0f;
-                float time = float(periodData[i].deltaTimeMs);
-                weightedSumT += biasMultiplexer * weight * time;
-                weightSum += biasMultiplexer * weight;
+    std::array<float, 2> measuredHalfTPerSEt = {-1.0f, -1.0f};
+    for (int setNo = 0; setNo < targetRecordSets.size(); setNo++) {
+        const std::vector<EdgeRecord> *pPeriodData = targetRecordSets[setNo];
+        const std::vector<EdgeRecord> &periodData = *pPeriodData;
+        std::array<float, 2> weightedSumT = {0, 0};
+        std::array<float, 2> weightSum = {0, 0};
+        for (int i = 1; i < periodData.size(); i++) {
+            float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
+            const Point &p1 = periodData[i - 1].point;
+            const Point &p2 = periodData[i].point;
+            auto distance = float(abs(p1.x - p2.x));
+            if (distance < 5) {
+                continue;
+            }
+            float weight = 1.0f;
+            int timei = periodData[i].deltaTimeMs;
+            float timef = float(timei);
+            if (timei < 500 || timei > 1400) {
+                continue;
+            }
+            if (periodData[i].type == EdgePointType::LEFT_EDGE) {
+                weightedSumT[0] += biasMultiplexer * weight * timef;
+                weightSum[0] += biasMultiplexer * weight;
+            } else if (periodData[i].type == EdgePointType::RIGHT_EDGE) {
+                weightedSumT[1] += biasMultiplexer * weight * timef;
+                weightSum[1] += biasMultiplexer * weight;
             }
         }
-        if (weightedSumT == 0 || weightSum == 0) {
-            roughHalfT = NaN;
+        if (weightSum[0] * weightSum[1] != 0) {
+            float leftT = weightedSumT[0] / weightSum[0];
+            float rightT = weightedSumT[1] / weightSum[1];
+            measuredHalfTPerSEt[setNo] = (leftT + rightT) / 2.0f;
         } else {
-            roughHalfT = weightedSumT / weightSum;
+            measuredHalfTPerSEt[setNo] = NaN;
         }
     }
-    {
-        float weightedSumT = 0;
-        float weightSum = 0;
-        for (const std::vector<EdgeRecord> *pPeriodData: targetRecordSets) {
-            const std::vector<EdgeRecord> &periodData = *pPeriodData;
-            for (int i = 1; i < periodData.size(); i++) {
-                float biasMultiplexer = (i - 1 < WEIGHT_FIRST_CYCLES.size()) ? (WEIGHT_FIRST_CYCLES[i - 1]) : 1.0f;
-                const Point &p1 = periodData[i - 1].point;
-                const Point &p2 = periodData[i].point;
-                auto distance = float(abs(p1.x - p2.x));
-                if (distance < 5) {
-                    continue;
-                }
-                float weight = 1.0f;
-                float time = float(periodData[i].deltaTimeMs);
-                if (time > roughHalfT * 1.5f || time < roughHalfT * 0.6f) {
-                    continue;
-                }
-                weightedSumT += biasMultiplexer * weight * time;
-                weightSum += biasMultiplexer * weight;
-            }
-        }
-        if (weightedSumT == 0 || weightSum == 0) {
-            return NaN;
-        } else {
-            return weightedSumT / weightSum * 2.0f;
-        }
+    if (targetRecordSets.size() == 2) {
+        return (isnan(measuredHalfTPerSEt[0]) || isnan(measuredHalfTPerSEt[1])) ? NaN : (
+                (measuredHalfTPerSEt[0] + measuredHalfTPerSEt[1]) / 2.0f * 2.0f);
+    } else {
+        return measuredHalfTPerSEt[0] * 2.0f;
     }
 }
 
